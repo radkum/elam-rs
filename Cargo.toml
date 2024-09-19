@@ -1,0 +1,37 @@
+[package]
+name = "elam-rs"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+keywords = ["windows", "driver", "example", "wdf", "elam"]
+categories = ["hardware-support"]
+build = "build.rs"
+
+[package.metadata.wdk.driver-model]
+driver-type = "WDM"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+# Tests from root driver crates must be excluded since there's no way to prevent linker args from being passed to their unit tests: https://github.com/rust-lang/cargo/issues/12663
+test = false
+
+[build-dependencies]
+wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", version = "0.2.0" }
+embed-resource = "2.4.3"
+
+[dependencies]
+wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", version = "0.2.0" }
+wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", version = "0.2.0" }
+wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", version = "0.2.0" }
+wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", version = "0.2.0" }
+
+
+[profile.dev]
+panic = "abort"
+lto = true
+
+[profile.release]
+panic = "abort"
+lto = true
