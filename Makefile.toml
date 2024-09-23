@@ -15,20 +15,17 @@ command = "cargo"
 args = ["fmt"]
 
 [tasks.resources]
-workspace = false
 script = [
     "powershell .\\generate_cert.ps1",
 ]
 
 [tasks.build-driver]
-workspace = false
 dependencies = ["format"]
 script = [
     "cargo build %BUILD_FLAGS%",
 ]
 
 [tasks.rename]
-workspace = false
 cwd = "${TARGET_PATH}"
 script = [
     "IF exist %DRIVER_NAME%.sys (del %DRIVER_NAME%.sys)",
@@ -36,7 +33,6 @@ script = [
 ]
 
 [tasks.sign]
-workspace = false
 script = [
     # Load the Visual Studio Developer environment
     "call %VS_DEV_PROMPT%",
@@ -46,7 +42,7 @@ script = [
 ]
 
 [tasks.all]
-dependencies = ["build-driver", "rename", "sign"]
+dependencies = ["resources", "build-driver", "rename", "sign"]
 
 [tasks.rebuild]
 dependencies = [
