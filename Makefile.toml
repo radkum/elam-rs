@@ -1,0 +1,58 @@
+[env]
+DRIVER_NAME = "elam_rs"
+DRIVER_CRATE_NAME = "elam_rs"
+VS_DEV_PROMPT = "\"%ProgramFiles(x86)%\\Microsoft Visual Studio\\2019\\Professional\\VC\\Auxiliary\\Build\\vcvars64.bat\""
+
+[env.development]
+TARGET_PATH="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}\\debug"
+
+[env.production]
+TARGET_PATH="${CARGO_MAKE_CRATE_TARGET_DIRECTORY}\\release"
+BUILD_FLAGS = "--release"
+
+[tasks.format]
+command = "cargo"
+args = ["fmt"]
+
+[tasks.resources]
+workspace = false
+script = [
+    "powershell .\\generate_cert.ps1",
+]
+
+[tasks.build-driver]
+workspace = false
+dependencies = ["format"]
+script = [
+    "cargo build %BUILD_FLAGS%",
+]
+
+[tasks.rename]
+workspace = false
+cwd = "${TARGET_PATH}"
+script = [
+    "IF exist %DRIVER_NAME%.sys (del %DRIVER_NAME%.sys)",
+    "rename %DRIVER_NAME%.dll %DRIVER_NAME%.sys"
+]
+
+[tasks.sign]
+workspace = false
+script = [
+    # Load the Visual Studio Developer environment
+    "call %VS_DEV_PROMPT%",
+
+    # Create a self signed certificate (only if not already done)
+    "if not exist %DRIVER_NAME%.pfx ( echo You are missing of certificate ) else ( signtool.exe sign /fd SHA256 /a /v /ph /f %DRIVER_NAME%.pfx /p password /t http://timestamp.digicert.com %TARGET_PATH%/%DRIVER_NAME%.sys )",
+]
+
+[tasks.all]
+dependencies = ["build-driver", "rename", "sign"]
+
+[tasks.rebuild]
+dependencies = [
+    "clean",
+    "all",
+]
+
+[tasks.default]
+alias = "all"
