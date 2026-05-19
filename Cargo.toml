@@ -1,5 +1,5 @@
 [workspace]
-members = ["xtask"]
+members = ["xtask", "ppl-test"]
 default-members = ["."]
 resolver = "2"
 
@@ -27,7 +27,6 @@ wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", packa
 embed-resource = "2.4.3"
 
 [dependencies]
-wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", version = "0.2.0" }
 wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", version = "0.2.0" }
 wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", version = "0.2.0" }
 wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", version = "0.2.0" }
