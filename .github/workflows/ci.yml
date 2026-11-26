@@ -15,22 +15,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The driver needs the WDK and cannot be built on a stock runner; this
-      # job covers everything that is host-testable: the pure logic crate and
-      # the build/test tooling. Build the driver locally with `cargo xtask`.
-      - name: Install nightly toolchain
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt, clippy
+      # Toolchain is pinned in rust-toolchain.toml; `rustup show` installs it
+      # (together with the rustfmt/clippy components it lists) if missing.
+      - name: Install pinned toolchain
+        run: rustup show
 
+      - uses: Swatinem/rust-cache@v2
+
+      # The driver needs the WDK and cannot be built on a stock runner; this
+      # job covers everything host-testable: the pure logic crate and the
+      # build/test tooling. Build the driver locally with `cargo xtask`.
       - name: Format check
         run: cargo fmt --all -- --check
 
       - name: Unit tests (elam-core)
-        run: cargo test -p elam-core
+        run: cargo test --locked -p elam-core
 
       - name: Clippy (core + tooling)
-        run: cargo clippy -p elam-core -p xtask -p ppl-test --all-targets -- -D warnings
-
-      - name: Build host tooling
-        run: cargo build -p xtask -p ppl-test
+        run: cargo clippy --locked -p elam-core -p xtask -p ppl-test --all-targets -- -D warnings
