@@ -1,6 +1,6 @@
 use std::{
     env,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
 };
 
@@ -21,11 +21,13 @@ fn main() {
         "all" => all(release),
         "rebuild" => rebuild(release),
         "clean" => clean(),
+        "stage" => stage(release),
+        "ppl-test" => ppl_test(release),
         _ => {
             eprintln!("Unknown task: {task}");
             print_help();
             std::process::exit(1);
-        }
+        },
     };
 
     if let Err(e) = result {
@@ -65,18 +67,20 @@ fn rename(release: bool) -> Result<()> {
     if sys.exists() {
         std::fs::remove_file(&sys)?;
     }
-    std::fs::rename(&dll, &sys).map_err(|e| {
-        format!("rename failed ({} -> {}): {e}", dll.display(), sys.display()).into()
-    })
+    std::fs::rename(&dll, &sys)
+        .map_err(|e| format!("rename failed ({} -> {}): {e}", dll.display(), sys.display()).into())
 }
 
 fn sign(release: bool) -> Result<()> {
-    let root = workspace_root();
-    let pfx = root.join(format!("{DRIVER_NAME}.pfx"));
+    let sys = target_dir(release).join(format!("{DRIVER_NAME}.sys"));
+    sign_file(&sys)
+}
+
+fn sign_file(path: &Path) -> Result<()> {
+    let pfx = workspace_root().join(format!("{DRIVER_NAME}.pfx"));
     if !pfx.exists() {
         return Err("elam_rs.pfx not found — run `cargo xtask resources` first".into());
     }
-    let sys = target_dir(release).join(format!("{DRIVER_NAME}.sys"));
     let signtool = find_signtool()?;
     run(
         &signtool.to_string_lossy(),
@@ -93,9 +97,19 @@ fn sign(release: bool) -> Result<()> {
             "password",
             "/t",
             "http://timestamp.digicert.com",
-            sys.to_str().unwrap(),
+            path.to_str().unwrap(),
         ],
     )
+}
+
+fn ppl_test(release: bool) -> Result<()> {
+    let mut args = vec!["build", "--package", "ppl-test"];
+    if release {
+        args.push("--release");
+    }
+    cargo(&args)?;
+    let exe = target_dir(release).join("ppl_test.exe");
+    sign_file(&exe)
 }
 
 fn all(release: bool) -> Result<()> {
@@ -110,8 +124,39 @@ fn rebuild(release: bool) -> Result<()> {
     all(release)
 }
 
+fn stage(release: bool) -> Result<()> {
+    let src = target_dir(release);
+    let root = workspace_root();
+    let stage = root.join("target").join("stage");
+    std::fs::create_dir_all(&stage).map_err(|e| format!("failed to create target/stage: {e}"))?;
+
+    let files: &[(&str, Option<&str>)] = &[
+        (&format!("{DRIVER_NAME}.sys"), None),
+        (&format!("{DRIVER_NAME}.pfx"), Some("")), // source: workspace root
+        ("ppl_test.exe", None),
+        ("install.ps1", Some("")),
+        ("diagnose.ps1", Some("")),
+    ];
+
+    for (name, root_override) in files {
+        let from = match root_override {
+            Some(_) => root.join(name),
+            None => src.join(name),
+        };
+        if !from.exists() {
+            return Err(format!("{} not found — build first", from.display()).into());
+        }
+        std::fs::copy(&from, stage.join(name))
+            .map_err(|e| format!("failed to copy {name}: {e}"))?;
+    }
+
+    println!("Staged to: {}", stage.display());
+    println!("Copy the contents to the test VM and run install.ps1 as Administrator.");
+    Ok(())
+}
+
 fn clean() -> Result<()> {
-    cargo(&["clean"])
+    cargo(&["clean", "--package", "elam-rs"])
 }
 
 fn cargo(args: &[&str]) -> Result<()> {
@@ -183,6 +228,8 @@ Tasks:
   sign           Sign the driver with signtool.exe
   all            resources -> build -> rename -> sign  [default]
   rebuild        clean -> all
-  clean          cargo clean"
+  clean          cargo clean
+  stage          Collect driver + test artifacts into target/stage/ (copy to VM)
+  ppl-test       Build + sign ppl_test.exe (service for PPL anchor testing)"
     );
 }

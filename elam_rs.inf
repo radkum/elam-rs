@@ -1,0 +1,67 @@
+; elam_rs.inf — ELAM RS driver installation
+;
+; Install (run as Administrator):
+;   rundll32.exe setupapi.dll,InstallHinfSection DefaultInstall 128 <abs-path>\elam_rs.inf
+;
+; Or via xtask:
+;   cargo xtask install [--release]
+;
+; A reboot is required after installation so the boot-start driver is loaded.
+;
+; Uninstall:
+;   cargo xtask uninstall [--release]
+;   — or —
+;   rundll32.exe setupapi.dll,InstallHinfSection DefaultUninstall 128 <abs-path>\elam_rs.inf
+
+[Version]
+Signature   = "$Windows NT$"
+Provider    = %ManufacturerName%
+DriverVer   = 05/15/2026,0.1.0.0
+
+[SourceDisksNames]
+1 = %DiskName%,,,"."
+
+[SourceDisksFiles]
+elam_rs.sys = 1
+
+[DestinationDirs]
+DefaultDestDir = 12     ; %SystemRoot%\System32\drivers
+
+; ---- install ----------------------------------------------------------------
+
+[DefaultInstall.NTamd64]
+CopyFiles = Drivers_Dir
+
+[DefaultInstall.NTamd64.Services]
+AddService = Elam,, ElamRS_Service
+
+[ElamRS_Service]
+DisplayName    = %ServiceDescription%
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_BOOT_START%
+ErrorControl   = %SERVICE_ERROR_CRITICAL%
+ServiceBinary  = %12%\elam_rs.sys
+LoadOrderGroup = Early-Launch
+
+; ---- uninstall --------------------------------------------------------------
+
+[DefaultUninstall.NTamd64]
+DelFiles = Drivers_Dir
+
+[DefaultUninstall.NTamd64.Services]
+DelService = Elam, 0x204   ; SPSVCINST_STOPSERVICE | delete
+
+; ---- file list --------------------------------------------------------------
+
+[Drivers_Dir]
+elam_rs.sys
+
+; ---- strings ----------------------------------------------------------------
+
+[Strings]
+ManufacturerName   = "elam-rs"
+ServiceDescription = "ELAM RS (PPL anchor)"
+DiskName           = "elam_rs Driver Disk"
+SERVICE_KERNEL_DRIVER  = 1
+SERVICE_BOOT_START     = 0
+SERVICE_ERROR_CRITICAL = 3

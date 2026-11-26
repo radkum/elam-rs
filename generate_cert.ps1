@@ -119,24 +119,31 @@ filter Get-TBSHash {
     ($TBSHashBytes | % { $_.ToString('X2') }) -join ''
 }
 
-# Generate new Certificate
-$certFolder = "Cert:\CurrentUser\My"
-$cert = New-SelfSignedCertificate -certstorelocation $certFolder -HashAlgorithm SHA256 -Subject "CN=elam_rs" -TextExtension @("2.5.29.37={text}1.3.6.1.4.1.311.61.4.1,1.3.6.1.5.5.7.3.3")
-$certLocation = "$certFolder\"+$cert.Thumbprint
+$passwordSecure = ConvertTo-SecureString -String $password -Force -AsPlainText
+$outputFilename = "elam_rs.pfx"
+
+if (Test-Path $outputFilename) {
+    # Reuse existing cert so the ELAM resource hash stays stable across rebuilds.
+    # Delete elam_rs.pfx manually to force regeneration.
+    Write-Host "$outputFilename already exists - reusing (delete it to regenerate)"
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($outputFilename, $passwordSecure)
+} else {
+    # Generate new Certificate
+    $certFolder = "Cert:\CurrentUser\My"
+    $cert = New-SelfSignedCertificate -certstorelocation $certFolder -HashAlgorithm SHA256 -Subject "CN=elam_rs" -TextExtension @("2.5.29.37={text}1.3.6.1.4.1.311.61.4.1,1.3.6.1.5.5.7.3.3")
+    $certLocation = "$certFolder\"+$cert.Thumbprint
+    Export-PfxCertificate -cert $cert -FilePath $outputFilename -Password $passwordSecure
+    Remove-Item $certLocation
+    $cert = $null
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($outputFilename, $passwordSecure)
+    Write-Host "Written Cert and key to $outputFilename"
+}
+
 # Use the awesome 'Get-TBSHash' from above
 $hash = Get-TBSHash $cert
 
 # Write Hash to update in resource
 Write-Host "SHA256 Hash: $hash"
-
-# Export from store using the password
-$passwordSecure = ConvertTo-SecureString -String $password -Force -AsPlainText
-$outputFilename = "elam_rs.pfx"
-Export-PfxCertificate -cert $cert -FilePath $outputFilename -Password $passwordSecure
-
-# Delete Certificate from store
-Remove-Item $certLocation
-$cert = $null
 
 # Update Driver Resource with hash
 Write-Output @"
@@ -149,7 +156,7 @@ Write-Output @"
 #define VER_INTERNALNAME_STR     "elam_rs.sys"
 
 #include "common.ver"
-MicrosoftElamCertificateInfo  MSElamCertInfoID
+1 MicrosoftElamCertificateInfo MOVEABLE PURE
 {
       1,
       L"$hash\0",

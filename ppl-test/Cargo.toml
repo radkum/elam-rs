@@ -1,0 +1,12 @@
+[package]
+name = "ppl-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "ppl_test"
+path = "src/main.rs"
+
+[dependencies]
+windows-service = "0.7"
