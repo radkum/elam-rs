@@ -156,6 +156,10 @@ Expected output:
 Cross-check in Process Hacker / SystemInformer: the `Protection` column should
 read `Antimalware (Light)` for `ppl_test.exe`.
 
+Verified end-to-end on Windows 10 22H2 (Hyper-V, test signing): the driver loads
+at boot, `ElamPplTest` starts protected and logs
+`Protection level: 0x00000003 (Antimalware-Light)`.
+
 **Failure signals:**
 
 - `sc start` returns `1297` (`ERROR_PRIVILEGE_NOT_HELD`) — the driver was not

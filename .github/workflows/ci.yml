@@ -33,3 +33,31 @@ jobs:
 
       - name: Clippy (core + tooling)
         run: cargo clippy --locked -p elam-core -p xtask -p ppl-test --all-targets -- -D warnings
+
+  # Building the driver (and ppl_test) needs the WDK and LLVM/libclang, which a
+  # stock GitHub runner does not have. This jobs targets a self-hosted Windows
+  # runner with the WDK installed (and detected, e.g. via WDKContentRoot) and
+  # LLVM available. Adjust the `runs-on` labels / LIBCLANG_PATH to match it.
+  driver:
+    name: Driver build (self-hosted, WDK + LLVM)
+    runs-on: [self-hosted, windows, x64]
+    env:
+      LIBCLANG_PATH: C:\Program Files\LLVM\bin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The driver embeds the ELAM cert hash from a generated .rc file, so the
+      # certificate must be created before building.
+      - name: Generate certificate and resource
+        run: cargo xtask resources
+
+      - name: Build driver
+        run: cargo build --locked -p elam-rs
+
+      - name: Build ppl-test
+        run: cargo build --locked -p ppl-test
