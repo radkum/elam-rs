@@ -29,6 +29,7 @@ test = false
 # wdk-build 0.6.0, ...), so only the revision is specified here.
 wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
 embed-resource = "2.4.3"
+elam-core = { path = "elam-core" }
 
 [dependencies]
 wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }

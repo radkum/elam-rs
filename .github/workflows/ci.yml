@@ -28,8 +28,8 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
-      - name: Unit tests (elam-core)
-        run: cargo test --locked -p elam-core
+      - name: Unit tests (elam-core, xtask)
+        run: cargo test --locked -p elam-core -p xtask
 
       - name: Clippy (core + tooling)
         run: cargo clippy --locked -p elam-core -p xtask -p ppl-test --all-targets -- -D warnings

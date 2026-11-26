@@ -1,6 +1,6 @@
 use std::{env, fs, path::Path};
 
-const HASH_LEN: usize = 32;
+use elam_core::SHA256_LEN;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     wdk_build::configure_wdk_binary_build()?;
@@ -31,7 +31,7 @@ fn generate_hash_tables() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn read_hashes(path: &Path) -> Result<Vec<[u8; HASH_LEN]>, Box<dyn std::error::Error>> {
+fn read_hashes(path: &Path) -> Result<Vec<[u8; SHA256_LEN]>, Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed={}", path.display());
 
     let text = match fs::read_to_string(path) {
@@ -40,49 +40,15 @@ fn read_hashes(path: &Path) -> Result<Vec<[u8; HASH_LEN]>, Box<dyn std::error::E
         Err(err) => return Err(err.into()),
     };
 
-    let mut hashes = Vec::new();
-    for (index, raw) in text.lines().enumerate() {
-        let line = raw.split('#').next().unwrap_or("").trim();
-        if line.is_empty() {
-            continue;
-        }
-
-        let hex: String =
-            line.chars().filter(|c| !c.is_whitespace() && *c != ',' && *c != ':').collect();
-
-        let hash = decode_sha256(&hex).ok_or_else(|| {
-            format!(
-                "{}:{}: invalid SHA-256 digest (expected 64 hex chars): {:?}",
-                path.display(),
-                index + 1,
-                raw.trim()
-            )
-        })?;
-        hashes.push(hash);
-    }
-
-    Ok(hashes)
+    // Parsing/validation lives in `elam-core` so it is unit-tested on the host.
+    elam_core::parse_hash_lines(&text)
+        .map_err(|err| format!("{}:{}: {err}", path.display(), err.line).into())
 }
 
-fn decode_sha256(hex: &str) -> Option<[u8; HASH_LEN]> {
-    if hex.len() != HASH_LEN * 2 {
-        return None;
-    }
-
-    let mut out = [0u8; HASH_LEN];
-    let bytes = hex.as_bytes();
-    for (i, out_byte) in out.iter_mut().enumerate() {
-        let hi = (bytes[i * 2] as char).to_digit(16)?;
-        let lo = (bytes[i * 2 + 1] as char).to_digit(16)?;
-        *out_byte = (hi * 16 + lo) as u8;
-    }
-    Some(out)
-}
-
-fn write_table(src: &mut String, name: &str, hashes: &[[u8; HASH_LEN]]) {
+fn write_table(src: &mut String, name: &str, hashes: &[[u8; SHA256_LEN]]) {
     use std::fmt::Write as _;
 
-    let _ = writeln!(src, "pub(crate) const {name}: [[u8; {HASH_LEN}]; {}] = [", hashes.len());
+    let _ = writeln!(src, "pub(crate) const {name}: [[u8; {SHA256_LEN}]; {}] = [", hashes.len());
     for hash in hashes {
         src.push_str("    [");
         for (i, byte) in hash.iter().enumerate() {

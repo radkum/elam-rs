@@ -9,8 +9,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 const DRIVER_NAME: &str = "elam_rs";
 
 fn main() {
-    let task = env::args().nth(1).unwrap_or_else(|| "all".into());
-    let release = env::args().any(|a| a == "--release");
+    let (task, release) = parse_cli(&env::args().collect::<Vec<_>>());
 
     let result = match task.as_str() {
         "fmt" | "format" => fmt(),
@@ -143,26 +142,13 @@ fn stage(release: bool) -> Result<()> {
     let stage = root.join("target").join("stage");
     std::fs::create_dir_all(&stage).map_err(|e| format!("failed to create target/stage: {e}"))?;
 
-    let files: &[(&str, Option<&str>)] = &[
-        (&format!("{DRIVER_NAME}.sys"), None),
-        (&format!("{DRIVER_NAME}.pfx"), Some("")), // source: workspace root
-        ("ppl_test.exe", None),
-        ("install.ps1", Some("")),
-        ("uninstall.ps1", Some("")),
-        ("diagnose.ps1", Some("")),
-        (&format!("{DRIVER_NAME}.inf"), Some("")),
-    ];
-
-    for (name, root_override) in files {
-        let from = match root_override {
-            Some(_) => root.join(name),
-            None => src.join(name),
-        };
+    for item in stage_manifest(DRIVER_NAME) {
+        let from = if item.from_root { root.join(&item.name) } else { src.join(&item.name) };
         if !from.exists() {
             return Err(format!("{} not found — build first", from.display()).into());
         }
-        std::fs::copy(&from, stage.join(name))
-            .map_err(|e| format!("failed to copy {name}: {e}"))?;
+        std::fs::copy(&from, stage.join(&item.name))
+            .map_err(|e| format!("failed to copy {}: {e}", item.name))?;
     }
 
     println!("Staged to: {}", stage.display());
@@ -187,11 +173,47 @@ fn run(program: &str, args: &[&str]) -> Result<()> {
 }
 
 fn target_dir(release: bool) -> PathBuf {
-    let profile = if release { "release" } else { "debug" };
     let base = env::var("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| workspace_root().join("target"));
-    base.join(profile)
+    profile_dir(&base, release)
+}
+
+fn profile_dir(base: &Path, release: bool) -> PathBuf {
+    base.join(if release { "release" } else { "debug" })
+}
+
+/// Parse `<program> [task] [--release...]`. Leading flags are skipped, so
+/// `cargo xtask --release` means the default `all` task in release mode.
+fn parse_cli(args: &[String]) -> (String, bool) {
+    let release = args.iter().skip(1).any(|arg| arg == "--release");
+    let task = args
+        .iter()
+        .skip(1)
+        .find(|arg| !arg.starts_with("--"))
+        .cloned()
+        .unwrap_or_else(|| "all".to_owned());
+    (task, release)
+}
+
+struct StageItem {
+    name: String,
+    /// Source is the workspace root (scripts, cert, INF) rather than the target
+    /// profile directory (built binaries).
+    from_root: bool,
+}
+
+/// Files collected into `target/stage/`.
+fn stage_manifest(driver_name: &str) -> Vec<StageItem> {
+    vec![
+        StageItem { name: format!("{driver_name}.sys"), from_root: false },
+        StageItem { name: format!("{driver_name}.pfx"), from_root: true },
+        StageItem { name: "ppl_test.exe".to_owned(), from_root: false },
+        StageItem { name: "install.ps1".to_owned(), from_root: true },
+        StageItem { name: "uninstall.ps1".to_owned(), from_root: true },
+        StageItem { name: "diagnose.ps1".to_owned(), from_root: true },
+        StageItem { name: format!("{driver_name}.inf"), from_root: true },
+    ]
 }
 
 fn workspace_root() -> PathBuf {
@@ -247,4 +269,58 @@ Tasks:
   stage          Collect driver + test artifacts into target/stage/ (copy to VM)
   ppl-test       Build + sign ppl_test.exe (service for PPL anchor testing)"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(parts: &[&str]) -> Vec<String> {
+        parts.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn parse_cli_defaults_to_all() {
+        assert_eq!(parse_cli(&args(&["xtask"])), ("all".to_owned(), false));
+    }
+
+    #[test]
+    fn parse_cli_release_without_task_means_all() {
+        assert_eq!(parse_cli(&args(&["xtask", "--release"])), ("all".to_owned(), true));
+    }
+
+    #[test]
+    fn parse_cli_task_and_release() {
+        assert_eq!(
+            parse_cli(&args(&["xtask", "rebuild", "--release"])),
+            ("rebuild".to_owned(), true)
+        );
+    }
+
+    #[test]
+    fn parse_cli_task_only() {
+        assert_eq!(parse_cli(&args(&["xtask", "stage"])), ("stage".to_owned(), false));
+    }
+
+    #[test]
+    fn profile_dir_picks_profile() {
+        let base = Path::new("target");
+        assert_eq!(profile_dir(base, false), base.join("debug"));
+        assert_eq!(profile_dir(base, true), base.join("release"));
+        assert_ne!(profile_dir(base, false), profile_dir(base, true));
+    }
+
+    #[test]
+    fn stage_manifest_has_expected_sources() {
+        let items = stage_manifest("elam_rs");
+        let item = |name: &str| items.iter().find(|i| i.name == name).unwrap();
+
+        assert!(!item("elam_rs.sys").from_root);
+        assert!(!item("ppl_test.exe").from_root);
+        assert!(item("elam_rs.pfx").from_root);
+        assert!(item("elam_rs.inf").from_root);
+        assert!(item("install.ps1").from_root);
+        assert!(item("uninstall.ps1").from_root);
+        assert!(item("diagnose.ps1").from_root);
+    }
 }

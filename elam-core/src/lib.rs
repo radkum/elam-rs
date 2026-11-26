@@ -7,8 +7,11 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use core::fmt::Write;
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::fmt::{self, Write};
 
 /// Length of a SHA-256 digest in bytes.
 pub const SHA256_LEN: usize = 32;
@@ -74,6 +77,64 @@ pub fn format_hex(data: &[u8], bytes_per_line: usize) -> String {
     }
 
     out
+}
+
+/// Error returned by [`parse_hash_lines`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HashParseError {
+    /// 1-based line number in the input text.
+    pub line: usize,
+    /// The offending line (trimmed).
+    pub input: String,
+}
+
+impl fmt::Display for HashParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid SHA-256 digest (expected 64 hex chars): {:?}", self.input)
+    }
+}
+
+/// Parse a hash allowlist: one SHA-256 digest per line as 64 hex characters.
+///
+/// Blank lines and `#` comments are ignored. Spaces, tabs, `,` and `:` may be
+/// used as separators (e.g. `aa:bb:...`). The first malformed line is returned
+/// as [`HashParseError`].
+pub fn parse_hash_lines(text: &str) -> core::result::Result<Vec<[u8; SHA256_LEN]>, HashParseError> {
+    let mut hashes = Vec::new();
+
+    for (index, raw) in text.lines().enumerate() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let hex: String =
+            line.chars().filter(|c| !c.is_whitespace() && *c != ',' && *c != ':').collect();
+
+        match decode_sha256(&hex) {
+            Some(hash) => hashes.push(hash),
+            None => {
+                return Err(HashParseError { line: index + 1, input: raw.trim().to_string() });
+            },
+        }
+    }
+
+    Ok(hashes)
+}
+
+fn decode_sha256(hex: &str) -> Option<[u8; SHA256_LEN]> {
+    if hex.len() != SHA256_LEN * 2 {
+        return None;
+    }
+
+    let mut out = [0u8; SHA256_LEN];
+    let bytes = hex.as_bytes();
+    for (i, out_byte) in out.iter_mut().enumerate() {
+        let hi = (bytes[i * 2] as char).to_digit(16)?;
+        let lo = (bytes[i * 2 + 1] as char).to_digit(16)?;
+        *out_byte = (hi * 16 + lo) as u8;
+    }
+    Some(out)
 }
 
 #[cfg(test)]
@@ -154,5 +215,64 @@ mod tests {
     fn hex_zero_line_width_does_not_divide_by_zero() {
         let out = format_hex(&[1, 2, 3], 0);
         assert_eq!(out.matches("\r\n").count(), 2);
+    }
+
+    // ---- hash allowlist parser ----
+
+    const HASH_A: &str = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899";
+    const HASH_A_BYTES: [u8; SHA256_LEN] = [
+        0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+        0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99,
+    ];
+
+    #[test]
+    fn parse_hash_lines_ignores_comments_and_separators() {
+        let text = format!("# header comment\n{}:{}  # inline\n\n", &HASH_A[..32], &HASH_A[32..]);
+        let hashes = parse_hash_lines(&text).unwrap();
+        assert_eq!(hashes, vec![HASH_A_BYTES]);
+    }
+
+    #[test]
+    fn parse_hash_lines_preserves_order() {
+        let a = "a".repeat(64);
+        let b = "b".repeat(64);
+        let hashes = parse_hash_lines(&format!("{a}\n{b}\n")).unwrap();
+        assert_eq!(hashes, vec![[0xaa; SHA256_LEN], [0xbb; SHA256_LEN]]);
+    }
+
+    #[test]
+    fn parse_hash_lines_rejects_wrong_length() {
+        let err = parse_hash_lines("abcd\n").unwrap_err();
+        assert_eq!(err.line, 1);
+    }
+
+    #[test]
+    fn parse_hash_lines_rejects_non_hex() {
+        let err = parse_hash_lines(&"z".repeat(64)).unwrap_err();
+        assert_eq!(err.line, 1);
+        assert!(err.to_string().contains("invalid SHA-256"));
+    }
+
+    #[test]
+    fn parse_hash_lines_reports_error_line() {
+        let good = "a".repeat(64);
+        let err = parse_hash_lines(&format!("{good}\n\nnot-hex\n")).unwrap_err();
+        assert_eq!(err.line, 3);
+    }
+
+    #[test]
+    fn parse_hash_lines_empty_is_empty() {
+        assert!(parse_hash_lines("").unwrap().is_empty());
+        assert!(parse_hash_lines("# only a comment\n\n").unwrap().is_empty());
+    }
+
+    #[test]
+    fn parse_hash_lines_handles_crlf() {
+        let good = "a".repeat(64);
+        assert_eq!(
+            parse_hash_lines(&format!("# c\r\n{good}\r\n")).unwrap(),
+            vec![[0xaa; SHA256_LEN]]
+        );
     }
 }
