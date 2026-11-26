@@ -3,37 +3,35 @@
 A minimal ELAM (Early Launch Anti-Malware) driver written in Rust, used as a
 **PPL (Protected Process Light) anchor** for an anti-malware / EDR service.
 
-### What this driver does (and what it does not)
+### What this driver does
 
 ELAM drivers can serve two purposes:
 
-1. **Anti-malware scanning** of boot-start drivers via the boot driver callback.
+1. **Anti-malware scanning** of boot-start drivers via the boot driver callback —
+   this driver classifies each image by its SHA-256 hash against the
+   `KNOWN_GOOD_HASHES` / `KNOWN_BAD_HASHES` tables (`src/enums.rs`), reporting
+   `KnownGoodImage`, `KnownBadImage`, or `UnknownImage`. Images not in either
+   table get the boot loader's default policy.
 2. **PPL anchoring** — the certificate embedded in the driver's
-   `MicrosoftElamCertificateInfo` resource lets Windows grant `PsProtectedSignerAntimalware`
-   protection to a user-mode service signed with the same cert.
+   `MicrosoftElamCertificateInfo` resource lets Windows grant
+   `PsProtectedSignerAntimalware` protection to a user-mode service signed with
+   the same cert.
 
-**This driver only does #2.** It does not classify, scan, or block any
-boot-start driver. Every image is reported as `BdCbClassificationUnknownImage`,
-which means the boot loader applies its default policy.
+Both are enabled. The mechanisms are independent: classification only takes
+effect when the boot driver callback is available, while PPL anchoring relies
+solely on the embedded certificate hash.
 
-### Why the boot driver callback is still registered
+### Boot driver callback registration is best-effort
 
-The PPL trust path reads the cert info directly from the driver's embedded
-resource — it does not call the boot driver callback. Strictly speaking, the
-callback is not needed to *validate* PPL.
+`DriverEntry` calls `IoRegisterBootDriverCallback`. On a properly signed ELAM
+driver this succeeds and classification runs.
 
-However, the Microsoft DDK requires every ELAM driver to call
-`IoRegisterBootDriverCallback` from `DriverEntry`. Skipping the registration is
-risky:
-
-- Windows may stop treating the image as a real ELAM driver.
-- `NtSetInformationProcess(ProcessProtectionInformation)` then fails with
-  `STATUS_INVALID_SIGNATURE` and the cause is not obvious.
-- The behavior is not contractually guaranteed to stay the same between
-  Windows versions.
-
-So we register a minimal, no-op callback. It costs ~10 lines, has no global
-state, performs no allocation, and never blocks an image.
+Under **test signing** with a self-signed certificate, Windows refuses the
+registration. This is not fatal: `DriverEntry` logs the failure and returns
+`STATUS_SUCCESS` so the driver stays resident. That matters because the PPL
+trust path reads the certificate hash from the *loaded* driver image, not from
+the callback. The driver therefore still anchors PPL but performs no
+classification until it is signed with a real Microsoft ELAM certificate.
 
 ### Build
 
@@ -93,7 +91,7 @@ interactive desktop, so `println!` would go nowhere.
 
 Why a service: a user-mode process cannot elevate itself to PPL. The two
 sanctioned paths are (1) being launched by `services.exe` with
-`launchProtected=2`, or (2) being launched by another PPL process. The service
+`launchProtected=3`, or (2) being launched by another PPL process. The service
 route is the only one that does not already require a PPL parent.
 
 Build and sign the test service with the same `elam_rs.pfx`:
@@ -106,7 +104,7 @@ Install and start (administrator):
 
 ```cmd
 sc create ElamPplTest binPath= "C:\VSExclude\elam-rs\target\debug\ppl_test.exe" type= own start= demand
-sc config ElamPplTest launchProtected= 2
+sc config ElamPplTest launchProtected= 3
 sc start ElamPplTest
 ```
 
@@ -140,7 +138,7 @@ read `Antimalware (Light)` for `ppl_test.exe`.
   the `.rc` and the signing key stay in sync.
 - The service starts but the log shows `Protection level: 0xFFFFFFFE (None)` —
   the binary loaded but `launchProtected` did not take effect; verify
-  `sc qc ElamPplTest` shows `LAUNCH_PROTECTED : 2`.
+  `sc qc ElamPplTest` shows `LAUNCH_PROTECTED : 3`.
 
 Cleanup:
 

@@ -1,3 +1,6 @@
+# Test-only: this password is hardcoded on purpose so the whole build/sign
+# pipeline is non-interactive. Never reuse this certificate for anything real —
+# generate_cert.ps1 creates a self-signed cert intended solely for a test VM.
 $password = "password"
 
 # This is very, very graciouslly taken from Matt G!
