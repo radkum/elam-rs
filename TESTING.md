@@ -170,8 +170,9 @@ log, clears `LaunchProtected`, and tries to stop/delete `ElamPplTest`.
 A **running protected service cannot be stopped or deleted, even by an
 administrator** — that is the point of PPL. If `ElamPplTest` is still registered
 after this run, reboot (it is demand-start, so it will not restart) and run
-`uninstall.ps1` again; the second run deletes it now that `LaunchProtected` is
-cleared. Reboot once more to complete driver removal.
+`uninstall.ps1` again; the second run deletes the service record immediately now
+that `LaunchProtected` is cleared (no extra reboot needed for it — the reboot
+between the two runs also completes driver removal).
 
 To turn off test signing after everything is removed:
 

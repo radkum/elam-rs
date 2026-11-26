@@ -181,8 +181,9 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 
 A running protected service cannot be stopped or deleted, even by an
 administrator. If `ElamPplTest` is still registered after the first run, reboot
-and run `uninstall.ps1` again (the first run cleared `LaunchProtected`), then
-reboot once more to finish driver removal.
+and run `uninstall.ps1` again — the first run cleared `LaunchProtected`, so the
+second run deletes the service record immediately. No further reboot is needed
+for that; the reboot between the two runs is also what completes driver removal.
 
 ### References
 

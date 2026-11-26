@@ -40,9 +40,11 @@ jobs:
   # LLVM available. Adjust the `runs-on` labels / LIBCLANG_PATH to match it.
   driver:
     name: Driver build (self-hosted, WDK + LLVM)
+    # Never run untrusted pull_request code on a self-hosted runner.
+    if: github.event_name == 'push'
     runs-on: [self-hosted, windows, x64]
     env:
-      LIBCLANG_PATH: C:\Program Files\LLVM\bin
+      LIBCLANG_PATH: 'C:\Program Files\LLVM\bin'
     steps:
       - uses: actions/checkout@v4
 
@@ -54,7 +56,7 @@ jobs:
       # The driver embeds the ELAM cert hash from a generated .rc file, so the
       # certificate must be created before building.
       - name: Generate certificate and resource
-        run: cargo xtask resources
+        run: cargo run --locked --package xtask -- resources
 
       - name: Build driver
         run: cargo build --locked -p elam-rs
