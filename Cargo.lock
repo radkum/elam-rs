@@ -229,7 +229,7 @@ version = "0.1.0"
 
 [[package]]
 name = "elam-rs"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "elam-core",
  "embed-resource",
