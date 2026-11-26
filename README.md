@@ -63,6 +63,16 @@ Windows SDK under `C:\Program Files (x86)\Windows Kits\10\bin`).
 
 Output: `target/{debug,release}/elam_rs.sys`.
 
+Pure logic (hash comparison, classification, hex formatting) lives in the
+`elam-core` crate and is covered by host unit tests:
+
+```
+cargo test -p elam-core
+```
+
+CI runs formatting, those tests and clippy. The driver itself needs the WDK and
+is built locally with `cargo xtask`.
+
 ### Install and run
 
 ```

@@ -1,5 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    wdk_build::configure_wdk_binary_build()?;
+    // wdk-build 0.2.x API (newer releases use `configure_wdk_binary_build`).
+    wdk_build::Config::from_env_auto()?.configure_binary_build();
 
     let resource_name = std::env::var("CARGO_PKG_NAME")?.replace("-", "_");
     println!("cargo:rerun-if-changed={resource_name}");

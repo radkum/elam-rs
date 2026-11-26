@@ -1,5 +1,5 @@
 [workspace]
-members = ["xtask", "ppl-test"]
+members = ["elam-core", "xtask", "ppl-test"]
 default-members = ["."]
 resolver = "2"
 
@@ -20,16 +20,21 @@ driver-type = "WDM"
 path = "src/lib.rs"
 crate-type = ["cdylib"]
 # Tests from root driver crates must be excluded since there's no way to prevent linker args from being passed to their unit tests: https://github.com/rust-lang/cargo/issues/12663
+# Pure logic lives in the `elam-core` crate, which is tested on the host.
 test = false
 
 [build-dependencies]
-wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", version = "0.2.0" }
+# Pinned to the last commit that still publishes the 0.2.x crates; `version`
+# alone resolves against HEAD, where only 0.4.x exists.
+wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
 embed-resource = "2.4.3"
 
 [dependencies]
-wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", version = "0.2.0" }
-wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", version = "0.2.0" }
-wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", version = "0.2.0" }
+wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+elam-core = { path = "elam-core" }
 
 
 [profile.dev]
