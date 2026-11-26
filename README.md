@@ -170,14 +170,19 @@ at boot, `ElamPplTest` starts protected and logs
   the `.rc` and the signing key stay in sync.
 - The service starts but the log shows `Protection level: 0xFFFFFFFE (None)` —
   the binary loaded but `launchProtected` did not take effect; verify
-  `sc qc ElamPplTest` shows `LAUNCH_PROTECTED : 3`.
+  `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\ElamPplTest').LaunchProtected`
+  is `3`, then reboot.
 
-Cleanup:
+Cleanup (administrator, on the VM):
 
-```cmd
-sc stop ElamPplTest
-sc delete ElamPplTest
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ```
+
+A running protected service cannot be stopped or deleted, even by an
+administrator. If `ElamPplTest` is still registered after the first run, reboot
+and run `uninstall.ps1` again (the first run cleared `LaunchProtected`), then
+reboot once more to finish driver removal.
 
 ### References
 
