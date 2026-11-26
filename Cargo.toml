@@ -24,16 +24,17 @@ crate-type = ["cdylib"]
 test = false
 
 [build-dependencies]
-# Pinned to the last commit that still publishes the 0.2.x crates; `version`
-# alone resolves against HEAD, where only 0.4.x exists.
-wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+# Pinned to a specific windows-drivers-rs commit for reproducible builds. The
+# five wdk crates no longer share a version number (wdk 0.5.0, wdk-sys 0.5.2,
+# wdk-build 0.6.0, ...), so only the revision is specified here.
+wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-build", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
 embed-resource = "2.4.3"
 
 [dependencies]
-wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
-wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
-wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
-wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", version = "0.2.0", rev = "d9fcaa210c31c9014e3bb849f6a01c6e21a8b4b3" }
+wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
+wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-alloc", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
+wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-panic", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
+wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", package = "wdk-sys", rev = "d5fd6b30ff8c236a9ea0119ad04c343185c18968" }
 elam-core = { path = "elam-core" }
 
 

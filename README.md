@@ -44,7 +44,9 @@ allowed. A malformed line fails the build. Rebuild after editing.
 ### Build
 
 Prerequisites: WDK installed and configured for Rust — see
-[windows-drivers-rs](https://github.com/microsoft/windows-drivers-rs/).
+[windows-drivers-rs](https://github.com/microsoft/windows-drivers-rs/). The
+`wdk-sys` bindings are generated with bindgen at build time, so LLVM/libclang
+must be installed and discoverable (on `PATH` or via `LIBCLANG_PATH`).
 
 The build pipeline is driven by an `xtask` crate (replaces the old
 `Makefile.toml`):

@@ -3,8 +3,7 @@ use std::{env, fs, path::Path};
 const HASH_LEN: usize = 32;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // wdk-build 0.2.x API (newer releases use `configure_wdk_binary_build`).
-    wdk_build::Config::from_env_auto()?.configure_binary_build();
+    wdk_build::configure_wdk_binary_build()?;
 
     generate_hash_tables()?;
 
