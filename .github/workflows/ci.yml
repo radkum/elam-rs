@@ -40,8 +40,11 @@ jobs:
   # LLVM available. Adjust the `runs-on` labels / LIBCLANG_PATH to match it.
   driver:
     name: Driver build (self-hosted, WDK + LLVM)
-    # Never run untrusted pull_request code on a self-hosted runner.
-    if: github.event_name == 'push'
+    # Never run untrusted pull_request code on a self-hosted runner, and stay
+    # disabled until a matching runner exists (otherwise the job queues forever
+    # and stalls the whole run). Enable by setting the repository variable
+    # ENABLE_DRIVER_CI=true once such a runner is registered.
+    if: github.event_name == 'push' && vars.ENABLE_DRIVER_CI == 'true'
     runs-on: [self-hosted, windows, x64]
     env:
       LIBCLANG_PATH: 'C:\Program Files\LLVM\bin'
