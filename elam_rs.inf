@@ -3,14 +3,12 @@
 ; Install (run as Administrator):
 ;   rundll32.exe setupapi.dll,InstallHinfSection DefaultInstall 128 <abs-path>\elam_rs.inf
 ;
-; Or via xtask:
-;   cargo xtask install [--release]
+; Or the supported way: `cargo xtask stage`, copy target\stage\ to the VM and
+; run install.ps1 (which registers the service and imports the certificate).
 ;
 ; A reboot is required after installation so the boot-start driver is loaded.
 ;
-; Uninstall:
-;   cargo xtask uninstall [--release]
-;   — or —
+; Uninstall: run uninstall.ps1, or
 ;   rundll32.exe setupapi.dll,InstallHinfSection DefaultUninstall 128 <abs-path>\elam_rs.inf
 
 [Version]
@@ -39,7 +37,7 @@ AddService = Elam,, ElamRS_Service
 DisplayName    = %ServiceDescription%
 ServiceType    = %SERVICE_KERNEL_DRIVER%
 StartType      = %SERVICE_BOOT_START%
-ErrorControl   = %SERVICE_ERROR_CRITICAL%
+ErrorControl   = %SERVICE_ERROR_NORMAL%
 ServiceBinary  = %12%\elam_rs.sys
 LoadOrderGroup = Early-Launch
 
@@ -64,4 +62,4 @@ ServiceDescription = "ELAM RS (PPL anchor)"
 DiskName           = "elam_rs Driver Disk"
 SERVICE_KERNEL_DRIVER  = 1
 SERVICE_BOOT_START     = 0
-SERVICE_ERROR_CRITICAL = 3
+SERVICE_ERROR_NORMAL   = 1

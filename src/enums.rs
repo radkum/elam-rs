@@ -1,22 +1,14 @@
 //! Boot-start image classification tables.
 //!
-//! Images are classified by their SHA-256 digest, as reported by the boot
-//! driver callback in `BDCB_IMAGE_INFORMATION::ImageHash`. Add an entry as a
-//! `[u8; SHA256_LEN]` (32-byte) array. Example:
+//! These tables are generated at build time from `hashes/known_good.txt` and
+//! `hashes/known_bad.txt` (see `build.rs`). Each line is a SHA-256 digest as 64
+//! hex characters; blank lines and `#` comments are ignored.
 //!
-//! ```ignore
-//! pub(crate) const KNOWN_BAD_HASHES: [[u8; SHA256_LEN]; 1] = [[
-//!     0xde, 0xad, 0xbe, 0xef, /* ... 32 bytes total ... */
-//! ]];
-//! ```
+//! An image whose `BDCB_IMAGE_INFORMATION::ImageHash` matches an entry in
+//! `KNOWN_BAD_HASHES` is reported as `KnownBadImage`, one matching
+//! `KNOWN_GOOD_HASHES` as `KnownGoodImage`, and everything else as
+//! `UnknownImage` (the boot loader's default policy applies).
 //!
-//! Both tables are empty by default, which means every image is reported as
-//! `UnknownImage` and the boot loader keeps its default policy.
+//! Both files are empty by default.
 
-use elam_core::SHA256_LEN;
-
-/// SHA-256 hashes of boot-start images that are known to be safe.
-pub(crate) const KNOWN_GOOD_HASHES: [[u8; SHA256_LEN]; 0] = [];
-
-/// SHA-256 hashes of boot-start images that are known to be malicious.
-pub(crate) const KNOWN_BAD_HASHES: [[u8; SHA256_LEN]; 0] = [];
+include!(concat!(env!("OUT_DIR"), "/known_hashes.rs"));

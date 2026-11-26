@@ -3,6 +3,10 @@
 # generate_cert.ps1 creates a self-signed cert intended solely for a test VM.
 $password = "password"
 
+# Fail fast on any unexpected error instead of continuing with a null cert and
+# writing an .rc with an empty certificate hash.
+$ErrorActionPreference = 'Stop'
+
 # This is very, very graciouslly taken from Matt G!
 # https://gist.github.com/mattifestation/660d7e17e43e8f32c38d820115274d2e
 # and
@@ -136,7 +140,7 @@ if (Test-Path $outputFilename) {
     $cert = New-SelfSignedCertificate -certstorelocation $certFolder -HashAlgorithm SHA256 -Subject "CN=elam_rs" -TextExtension @("2.5.29.37={text}1.3.6.1.4.1.311.61.4.1,1.3.6.1.5.5.7.3.3")
     $certLocation = "$certFolder\"+$cert.Thumbprint
     Export-PfxCertificate -cert $cert -FilePath $outputFilename -Password $passwordSecure
-    Remove-Item $certLocation
+    Remove-Item $certLocation -ErrorAction SilentlyContinue
     $cert = $null
     $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($outputFilename, $passwordSecure)
     Write-Host "Written Cert and key to $outputFilename"
@@ -144,6 +148,15 @@ if (Test-Path $outputFilename) {
 
 # Use the awesome 'Get-TBSHash' from above
 $hash = Get-TBSHash $cert
+
+# Fail fast: an empty/malformed hash would produce a driver whose
+# MicrosoftElamCertificateInfo is empty, silently breaking PPL anchoring.
+if (-not $hash -or $hash.Length -ne 64) {
+    throw "Certificate TBS hash is missing or malformed ('$hash'); aborting."
+}
+if (-not (Test-Path $outputFilename)) {
+    throw "$outputFilename was not created; aborting."
+}
 
 # Write Hash to update in resource
 Write-Host "SHA256 Hash: $hash"

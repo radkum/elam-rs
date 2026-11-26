@@ -9,7 +9,8 @@ ELAM drivers can serve two purposes:
 
 1. **Anti-malware scanning** of boot-start drivers via the boot driver callback —
    this driver classifies each image by its SHA-256 hash against the
-   `KNOWN_GOOD_HASHES` / `KNOWN_BAD_HASHES` tables (`src/enums.rs`), reporting
+   `KNOWN_GOOD_HASHES` / `KNOWN_BAD_HASHES` tables (generated from
+   `hashes/known_good.txt` and `hashes/known_bad.txt`), reporting
    `KnownGoodImage`, `KnownBadImage`, or `UnknownImage`. Images not in either
    table get the boot loader's default policy.
 2. **PPL anchoring** — the certificate embedded in the driver's
@@ -32,6 +33,13 @@ registration. This is not fatal: `DriverEntry` logs the failure and returns
 trust path reads the certificate hash from the *loaded* driver image, not from
 the callback. The driver therefore still anchors PPL but performs no
 classification until it is signed with a real Microsoft ELAM certificate.
+
+### Classifying images
+
+`hashes/known_good.txt` and `hashes/known_bad.txt` are read by `build.rs` and
+turned into the `KNOWN_GOOD_HASHES` / `KNOWN_BAD_HASHES` tables. Write one
+64-hex-character SHA-256 digest per line; blank lines and `#` comments are
+allowed. A malformed line fails the build. Rebuild after editing.
 
 ### Build
 
@@ -76,8 +84,12 @@ is built locally with `cargo xtask`.
 ### Install and run
 
 ```
-sc create Elam binpath=<path>\elam_rs.sys type=kernel start=boot error=critical group=Early-Launch
+sc create Elam binpath=<path>\elam_rs.sys type=kernel start=boot error=normal group=Early-Launch
 ```
+
+`error=normal` (not `critical`) is deliberate: on a test VM a failed boot-time
+driver should not make the system unbootable. A production ELAM driver would use
+`error=critical`.
 
 The host VM must allow test-signed drivers:
 

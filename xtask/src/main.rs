@@ -41,9 +41,22 @@ fn fmt() -> Result<()> {
 }
 
 fn resources() -> Result<()> {
+    let script = workspace_root().join("generate_cert.ps1");
+
+    // Windows PowerShell 5.1 can fail to autoload `Microsoft.PowerShell.Security`
+    // when it inherits a `PSModulePath` that includes PowerShell 7 / third-party
+    // module directories. The cert script only needs built-in cmdlets, so hand
+    // the child a clean, system-only module path.
+    let system_modules = match std::env::var("SystemRoot") {
+        Ok(root) => format!(r"{root}\System32\WindowsPowerShell\v1.0\Modules"),
+        Err(_) => r"C:\Windows\System32\WindowsPowerShell\v1.0\Modules".to_owned(),
+    };
+
     let status = Command::new("powershell")
-        .args(["-ExecutionPolicy", "Bypass", "-File", ".\\generate_cert.ps1"])
+        .args(["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(&script)
         .current_dir(workspace_root())
+        .env("PSModulePath", system_modules)
         .status()?;
     if !status.success() {
         return Err(format!("generate_cert.ps1 failed with {status}").into());

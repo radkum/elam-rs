@@ -1,0 +1,6 @@
+# Known-bad boot-start images (reported as KnownBadImage).
+#
+# One SHA-256 digest per line, as 64 hex characters. Blank lines and `#`
+# comments are ignored.
+#
+# This file is read by build.rs; rebuild after editing.
