@@ -164,8 +164,14 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 shutdown /r /t 0
 ```
 
-The script stops and deletes `ElamPplTest`, uninstalls the ELAM driver via INF, and removes the log.
-Reboot completes the driver removal.
+The script uninstalls the ELAM driver via INF, removes the certificate and the
+log, clears `LaunchProtected`, and tries to stop/delete `ElamPplTest`.
+
+A **running protected service cannot be stopped or deleted, even by an
+administrator** — that is the point of PPL. If `ElamPplTest` is still registered
+after this run, reboot (it is demand-start, so it will not restart) and run
+`uninstall.ps1` again; the second run deletes it now that `LaunchProtected` is
+cleared. Reboot once more to complete driver removal.
 
 To turn off test signing after everything is removed:
 
