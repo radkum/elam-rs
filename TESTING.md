@@ -155,6 +155,21 @@ find `ppl_test.exe` — the `Protection` column should read `Antimalware (Light)
 
 ---
 
+## Known limitations
+
+- **Image classification is inert under test signing.** `DriverEntry` attempts
+  `IoRegisterBootDriverCallback`, but Windows refuses registration for a
+  self-signed (test-signed) ELAM driver. The driver stays resident so it can
+  still anchor PPL, but `KNOWN_GOOD_HASHES` / `KNOWN_BAD_HASHES` are never
+  consulted. The end-to-end test above therefore verifies **PPL only**.
+  Exercising classification requires an ELAM driver signed with a real
+  Microsoft ELAM certificate.
+- `ppl_test.exe` is a benign logger: `0x00000003 (Antimalware-Light)` proves the
+  process was launched protected by the ELAM anchor, not that any scanning or
+  blocking happened.
+
+---
+
 ## Cleanup
 
 On the VM, as **Administrator**:
