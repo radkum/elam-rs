@@ -39,6 +39,16 @@ jobs:
       - name: Verify ELAM certificate resource format
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/check_elam_resource.ps1
 
+      - name: Install Pester (>= 5)
+        shell: pwsh
+        run: |
+          if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version -ge [version]'5.0.0' })) {
+            Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          }
+
+      - name: Pester tests (PowerShell scripts)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/run-tests.ps1
+
   # Building the driver (and ppl_test) needs the WDK and LLVM/libclang, which a
   # stock GitHub runner does not have. This jobs targets a self-hosted Windows
   # runner with the WDK installed (and detected, e.g. via WDKContentRoot) and
@@ -68,6 +78,10 @@ jobs:
 
       - name: Build driver
         run: cargo build --locked -p elam-rs
+
+      # Catches a dropped/renamed embedded ELAM resource, not just .rc text.
+      - name: Verify embedded ELAM certificate resource
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/check_driver_resource.ps1
 
       - name: Build ppl-test
         run: cargo build --locked -p ppl-test
