@@ -128,11 +128,15 @@ Install and start (administrator):
 
 ```cmd
 sc create ElamPplTest binPath= "C:\VSExclude\elam-rs\target\debug\ppl_test.exe" type= own start= demand
-sc config ElamPplTest launchProtected= 3
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\ElamPplTest" /v LaunchProtected /t REG_DWORD /d 3 /f
 sc start ElamPplTest
 ```
 
 (spaces after `=` are required by `sc.exe`)
+
+`LaunchProtected` is written as a registry DWORD because `sc.exe config
+launchProtected=` is not available on every Windows build (Windows 10's `sc.exe`
+rejects it with error 1639). `install.ps1` does this for you.
 
 Check the log:
 

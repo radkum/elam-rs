@@ -148,7 +148,9 @@ fn stage(release: bool) -> Result<()> {
         (&format!("{DRIVER_NAME}.pfx"), Some("")), // source: workspace root
         ("ppl_test.exe", None),
         ("install.ps1", Some("")),
+        ("uninstall.ps1", Some("")),
         ("diagnose.ps1", Some("")),
+        (&format!("{DRIVER_NAME}.inf"), Some("")),
     ];
 
     for (name, root_override) in files {

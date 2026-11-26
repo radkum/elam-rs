@@ -148,8 +148,8 @@ find `ppl_test.exe` — the `Protection` column should read `Antimalware (Light)
 | Symptom | Cause | Fix |
 |---|---|---|
 | `sc start` → 1297 `ERROR_PRIVILEGE_NOT_HELD` | Driver not recognized as ELAM, or ppl_test cert doesn't chain to the embedded hash | Confirm `sc query Elam` shows RUNNING; rebuild everything with a fresh cert |
-| `sc start` → 577 `ERROR_INVALID_IMAGE_HASH` | Self-signed cert not trusted on the VM (Root/TrustedPublisher stores) **or** cert was regenerated but not all binaries rebuilt | Re-run `install.ps1` (it imports the cert); if still failing, `cargo xtask resources && cargo xtask rebuild && cargo xtask ppl-test`, then re-stage |
-| Log shows `0xFFFFFFFE (None)` | `launchProtected` not applied | `sc qc ElamPplTest` — verify `LAUNCH_PROTECTED : 3`; delete and recreate the service |
+| `sc start` → 577 `ERROR_INVALID_IMAGE_HASH` and CodeIntegrity event 3033 "did not meet the Custom 3 / Antimalware signing level" | The driver's `MicrosoftElamCertificateInfo` resource is missing or misformatted, so the cert is not registered as an ELAM anchor | Make sure `generate_cert.ps1` emits the `MicrosoftElamCertificateInfo MSElamCertInfoID` form, then `cargo xtask rebuild`, reinstall and reboot. Also confirm the cert is in Root/TrustedPublisher and all binaries were signed with the same `.pfx`. |
+| Log shows `0xFFFFFFFE (None)` | `launchProtected` not applied | Verify `(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\ElamPplTest').LaunchProtected` is `3`; re-run `install.ps1` (it sets this DWORD) and reboot |
 | Log shows `<query failed>` | `GetProcessInformation` failed | Same as above |
 | `sc query Elam` → STOPPED after reboot | Driver failed to load at boot | Check System event log → source `Service Control Manager` |
 

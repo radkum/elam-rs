@@ -172,7 +172,10 @@ Write-Output @"
 #define VER_INTERNALNAME_STR     "elam_rs.sys"
 
 #include "common.ver"
-1 MicrosoftElamCertificateInfo MOVEABLE PURE
+// Windows looks for a resource of type MSElamCertInfoID named
+// MicrosoftElamCertificateInfo. Both tokens are string literals (do NOT #define
+// MSElamCertInfoID) - this matches the WDK elamsample.rc and real ELAM drivers.
+MicrosoftElamCertificateInfo  MSElamCertInfoID
 {
       1,
       L"$hash\0",
