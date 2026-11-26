@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  host:
+    name: Host checks (fmt, tests, clippy)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The driver needs the WDK and cannot be built on a stock runner; this
+      # job covers everything that is host-testable: the pure logic crate and
+      # the build/test tooling. Build the driver locally with `cargo xtask`.
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Unit tests (elam-core)
+        run: cargo test -p elam-core
+
+      - name: Clippy (core + tooling)
+        run: cargo clippy -p elam-core -p xtask -p ppl-test --all-targets -- -D warnings
+
+      - name: Build host tooling
+        run: cargo build -p xtask -p ppl-test

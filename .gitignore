@@ -1,5 +1,4 @@
 /.idea
-/Cargo.lock
 /target
 /elam_rs.rc
 /elam_rs.pfx
